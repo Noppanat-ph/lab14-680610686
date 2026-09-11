@@ -42,6 +42,17 @@ export default function ModalRegister({ onClose }: { onClose: () => void }) {
     gender: false,
   });
 
+  //lab ข้อ 2
+  const [extra, setExtra] = useState({
+    bottle: false,
+    shoes: false,
+    cap: false,
+  });
+
+  const updateExtra = (key: keyof typeof extra) => {
+    setExtra((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   //1.2. ฟังก์ชันอัปเดตข้อมูลแบบไดนามิก (updateForm)
   const updateForm = (key: keyof RegisterForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -54,6 +65,22 @@ export default function ModalRegister({ onClose }: { onClose: () => void }) {
     let total = 0;
     const selectedPlan = plans.find((p) => p.id === form.plan);
     if (selectedPlan) total += selectedPlan.price;
+
+    if (extra.bottle) {
+      const item = extraItems.find((e) => e.id === "bottle");
+      if (item) total += item.price;
+    }
+    if (extra.shoes) {
+      const item = extraItems.find((e) => e.id === "shoes");
+      if (item) total += item.price;
+    }
+    if (extra.cap) {
+      const item = extraItems.find((e) => e.id === "cap");
+      if (item) total += item.price;
+    }
+
+    if (extra.bottle && extra.shoes && extra.cap) total *= 0.8;
+
     return total;
   };
 
@@ -71,14 +98,37 @@ export default function ModalRegister({ onClose }: { onClose: () => void }) {
     if (hasError) return;
 
     const total = computeTotalPayment();
+
+    //บันทึกลง localstorage
+    const newRegistrant = {
+      id: Date.now(),
+      fullName: `${form.fname} ${form.lname}`,
+      gender: form.gender,
+      plan: plans.find((p) => p.id === form.plan)?.label,
+      extraItems: extraItems
+        .filter((item) => extra[item.id as keyof typeof extra])
+        .map((item) => item.label),
+      total: total,
+    };
+
+    const oldData = localStorage.getItem("registrants");
+
+    const registrants = oldData ? JSON.parse(oldData) : [];
+
+    registrants.push(newRegistrant);
+
+    localStorage.setItem("registrants", JSON.stringify(registrants));
+
     alert(
       `Registration complete. Please pay money for ${total.toLocaleString()} THB.`,
     );
+
+    onClose();
   };
 
   return (
     <>
-      //6.2. การสร้างและจัดการ UI Modal
+      {/* 6.2. การสร้างและจัดการ UI Modal */}
       <div className="modal fade show d-block" tabIndex={-1} role="dialog">
         <div className="modal-dialog">
           <div className="modal-content">
@@ -162,21 +212,38 @@ export default function ModalRegister({ onClose }: { onClose: () => void }) {
               <div>
                 <label className="form-label">Extra Item(s)</label>
                 <div>
-                  <input className="me-2 form-check-input" type="checkbox" />
+                  <input
+                    className="me-2 form-check-input"
+                    type="checkbox"
+                    checked={extra.bottle}
+                    onChange={() => updateExtra("bottle")}
+                  />
                   <label className="form-check-label">
                     Bottle 🍼 (200 THB)
                   </label>
                 </div>
                 <div>
-                  <input className="me-2 form-check-input" type="checkbox" />
+                  <input
+                    className="me-2 form-check-input"
+                    type="checkbox"
+                    checked={extra.shoes}
+                    onChange={() => updateExtra("shoes")}
+                  />
                   <label className="form-check-label">Shoes 👟 (600 THB)</label>
                 </div>
                 <div>
-                  <input className="me-2 form-check-input" type="checkbox" />
+                  <input
+                    className="me-2 form-check-input"
+                    type="checkbox"
+                    checked={extra.cap}
+                    onChange={() => updateExtra("cap")}
+                  />
                   <label className="form-check-label">Cap 🧢 (400 THB)</label>
                 </div>
                 {/* conditional เมื่อเลือกสินค้าเสริมทั้งหมด ให้แสดง discount*/}
-                <span className="text-success d-block">(20% Discounted)</span>
+                {extra.bottle && extra.shoes && extra.cap && (
+                  <span className="text-success d-block">(20% Discounted)</span>
+                )}
               </div>
               <div className="alert alert-primary mt-3" role="alert">
                 Promotion📢 Buy all items to get 20% Discount
